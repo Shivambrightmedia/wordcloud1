@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Cloud - Desktop</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@700&family=Lato:wght@400;700&family=Ubuntu:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: url('background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .control-row label {
+            flex: 1;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #444;
+        }
+
+        .control-row input[type="range"] {
+            flex: 1.2;
+            margin: 0 10px;
+        }
+
+        .control-row input[type="number"],
+        .control-row select {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .control-row select {
+            width: 120px;
+        }
+
+
+        #canvas-container {
+            width: 85vw;
+            height: 80vh;
+            position: absolute;
+            top: 55%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0);
+            border-radius: 20px;
+        }
+
+        .header {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            text-align: center;
+            background: white;
+            padding: 5px 25px;
+            border-radius: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin: 0;
+            color: #1a73e8;
+            font-size: 1.5rem;
+        }
+
+        #status-bar {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 0rem;
+            color: #000000;
+            z-index: 100;
+        }
+
+        #debug-table {
+            position: absolute;
+            bottom: 35px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            color: #333;
+            z-index: 90;
+            width: 220px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+
+        #settings-toggle {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 101;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #settings-toggle:hover {
+            transform: rotate(30deg);
+        }
+
+        #settings-panel {
+            position: absolute;
+            top: 65px;
+            right: 15px;
+            width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 102;
+            display: none;
+            border: 1px solid #eee;
+        }
+
+
+
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 8px;
+            color: white;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #apply-btn {
+            background: #1a73e8;
+        }
+
+        #reset-btn {
+            background: #f1f3f4;
+            color: #5f6368;
+        }
+
+        #show-all-btn {
+            background: #34a853;
+        }
+
+        #clear-btn {
+            background: #ea4335;
+        }
+
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="status-bar">Syncing...</div>
+    <div id="debug-table">
+        <strong>Last Raw Message:</strong>
+        <div id="raw-text" style="color:blue; font-style:italic; margin-bottom:5px;">Waiting...</div>
+        <strong>Total Words Found:</strong>
+        <div id="total-words">0</div>
+        <strong>Top Words:</strong>
+        <div id="debug-list">None</div>
+
+    </div>
+
+    <button id="settings-toggle">⚙️</button>
+
+    <div id="settings-panel">
+        <h2
+            style="margin:0 0 20px 0; font-size:1.2rem; color: #1a73e8; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px;">
+            Cloud Settings</h2>
+
+        <div class="control-row">
+            <label>Font Family:</label>
+            <select id="fontFamily">
+                <option value="'Inter', sans-serif">Inter</option>
+                <option value="'Segoe UI', sans-serif">Segoe UI</option>
+                <option value="'Roboto', sans-serif">Roboto</option>
+                <option value="'Montserrat', sans-serif">Montserrat</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+                <option value="'Ubuntu', sans-serif">Ubuntu</option>
+                <option value="'Lato', sans-serif">Lato</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="Impact, fantasy">Impact</option>
+            </select>
+        </div>
+
+        <div class="control-row">
+            <label>Word Color:</label>
+            <div style="flex: 1.2; display: flex; align-items: center; gap: 5px;">
+                <select id="colorMode" style="flex: 1;">
+                    <option value="random-dark">Mix (Dark)</option>
+                    <option value="random-light">Mix (Light)</option>
+                    <option value="custom">Custom Color</option>
+                </select>
+                <input type="color" id="wordColorPicker" value="#1a73e8"
+                    style="display: none; padding: 0; width: 30px; height: 30px; border: none; outline: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;">
+            </div>
+        </div>
+
+        <div class="control-row">
+            <label>Shape Mask:</label>
+            <div style="flex: 1.2; display: flex; align-items: center;">
+                <input type="file" id="maskInput" accept="image/*" style="font-size: 0.7rem; width: 100%;">
+            </div>
+        </div>
+        <div class="control-row">
+            <label>Background:</label>
+            <div style="flex: 1.2; display: flex; align-items: center;">
+                <input type="file" id="bgInput" accept="image/*" style="font-size: 0.7rem; width: 100%;">
+            </div>
+        </div>
+        <div id="mask-preview-container"
+            style="display:none; margin: 10px 0; text-align: center; background: #f8f9fa; padding: 10px; border-radius: 8px;">
+            <div style="font-size: 0.7rem; color: #666; margin-bottom: 5px;">Current Shape:</div>
+            <img id="mask-preview"
+                style="max-width: 80px; max-height: 80px; border: 1px solid #ddd; border-radius: 4px; background: white;">
+            <button id="clear-mask-btn"
+                style="background:#666; width: auto; padding: 4px 10px; font-size: 0.7rem; margin-top: 5px; display: block; margin-left: auto; margin-right: auto;">Remove
+                Mask</button>
+        </div>
+
+        <div
+            style="margin: 10px 0; display: flex; gap: 10px; flex-wrap: wrap; border-top: 1px solid #eee; padding-top: 10px;">
+            <button id="human-shape-btn"
+                style="background:#6c757d; font-size: 0.75rem; margin-top: 0; padding: 10px; border-radius: 8px; flex: 1;">👤
+                Use
+                Human Shape</button>
+        </div>
+
+
+        <div class="control-row">
+            <label>Global Scale:</label>
+            <input type="range" id="fontScale" min="1" max="200" value="20">
+            <input type="number" id="in-fontScale" min="0.1" max="20" step="0.1" value="2.0">
+        </div>
+        <div class="control-row">
+            <label>Min Length:</label>
+            <input type="range" id="minLen" min="1" max="10" value="1">
+            <input type="number" id="in-minLen" min="1" max="10" value="1">
+        </div>
+        <div class="control-row">
+            <label>Horizontal Offset:</label>
+            <input type="range" id="horizontalPos" min="-500" max="500" value="0">
+            <input type="number" id="in-horizontalPos" min="-500" max="500" value="0">
+        </div>
+        <div class="control-row">
+            <label>Vertical Offset:</label>
+            <input type="range" id="verticalPos" min="-500" max="500" value="0">
+            <input type="number" id="in-verticalPos" min="-500" max="500" value="0">
+        </div>
+        <div style="margin: 15px 0;">
+            <label style="display: flex; align-items: center; font-size: 0.9rem; cursor: pointer;">
+                <input type="checkbox" id="shrinkToFit" checked style="margin-right: 10px;"> Shrink to Fit (Auto-Fit)
+            </label>
+        </div>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <button id="save-preset-btn" style="background:#28a745; font-size: 0.8rem; padding: 8px;">💾 Save
+                Preset</button>
+            <button id="load-preset-btn" style="background:#17a2b8; font-size: 0.8rem; padding: 8px;">📂 Load
+                Preset</button>
+        </div>
+        <button id="refresh-btn" style="background: #fbbc04; color: #3c4043;">Refresh Now</button>
+        <button id="apply-btn">Apply Settings</button>
+        <button id="reset-btn">Reset Defaults</button>
+        <div style="border-top: 1px solid #f1f3f4; margin-top: 15px; padding-top: 10px;">
+            <button id="show-all-btn">Show All History</button>
+            <button id="clear-btn">Clear Session</button>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="word-cloud-canvas"></canvas>
+        <div id="loading-overlay">Generating Cloud...</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('word-cloud-canvas');
+        const statusBar = document.getElementById('status-bar');
+        const rawTextDiv = document.getElementById('raw-text');
+        const totalWordsDiv = document.getElementById('total-words');
+        const debugList = document.getElementById('debug-list');
+        const settingsPanel = document.getElementById('settings-panel');
+
+        let sessionStartTime = null;
+        let cachedMessages = [];
+        let fontScale = 2.0;
+        let minLen = 1;
+        let isRendering = false;
+        let horizontalPos = 0;
+        let verticalPos = 0;
+        let selectedFont = "'Inter', sans-serif";
+        let selectedColorMode = 'random-dark';
+        let selectedCustomColor = '#1a73e8';
+        let currentMask = null;
+        let maskImageSource = null;
+        let originalMaskURL = null;
+        let backgroundImageSource = 'background.jpg';
+
+        const maskInput = document.getElementById('maskInput');
+        const bgInput = document.getElementById('bgInput');
+        const colorMode = document.getElementById('colorMode');
+        const wordColorPicker = document.getElementById('wordColorPicker');
+
+        colorMode.onchange = (e) => {
+            if (e.target.value === 'custom') {
+                wordColorPicker.style.display = 'block';
+            } else {
+                wordColorPicker.style.display = 'none';
+            }
+        };
+
+        const maskPreview = document.getElementById('mask-preview');
+        const maskPreviewContainer = document.getElementById('mask-preview-container');
+        const clearMaskBtn = document.getElementById('clear-mask-btn');
+        const humanShapeBtn = document.getElementById('human-shape-btn');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        function processMaskImage(img, callback) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = img.naturalWidth;
+            tempCanvas.height = img.naturalHeight;
+            const tctx = tempCanvas.getContext('2d');
+            tctx.drawImage(img, 0, 0);
+
+            const imageData = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            const data = imageData.data;
+            let hasTransparency = false;
+
+            for (let i = 3; i < data.length; i += 4) {
+                if (data[i] < 50) {
+                    hasTransparency = true;
+                    break;
+                }
+            }
+
+            // High-contrast silhouette: make everything either pure black (target) or pure transparent (background)
+            if (!hasTransparency) {
+                for (let i = 0; i < data.length; i += 4) {
+                    // Turn white/light pixels into transparent ones, and keep everything else solid black
+                    if (data[i] > 200 && data[i + 1] > 200 && data[i + 2] > 200) {
+                        data[i + 3] = 0;
+                    } else {
+                        data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 255;
+                    }
+                }
+                tctx.putImageData(imageData, 0, 0);
+            }
+            callback(tempCanvas);
+        }
+
+        document.getElementById('settings-toggle').onclick = () => settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
+
+        // Sync Logic Helper
+        function setupSync(sliderId, inputId, multiplier = 1, fixed = 0) {
+            const slider = document.getElementById(sliderId);
+            const input = document.getElementById(inputId);
+            slider.oninput = (e) => input.value = (e.target.value * multiplier).toFixed(fixed);
+            input.oninput = (e) => {
+                let val = parseFloat(e.target.value);
+                if (isNaN(val)) return;
+                slider.value = (val / multiplier);
+            };
+        }
+
+        setupSync('fontScale', 'in-fontScale', 0.1, 1);
+        setupSync('minLen', 'in-minLen', 1, 0);
+        setupSync('horizontalPos', 'in-horizontalPos', 1, 0);
+        setupSync('verticalPos', 'in-verticalPos', 1, 0);
+
+        maskInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        processMaskImage(img, (processedCanvas) => {
+                            maskImageSource = processedCanvas;
+                            originalMaskURL = event.target.result;
+                            maskPreview.src = event.target.result;
+                            maskPreviewContainer.style.display = 'block';
+                        });
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        bgInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    backgroundImageSource = event.target.result;
+                    document.body.style.backgroundImage = `url('${backgroundImageSource}')`;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        humanShapeBtn.onclick = () => {
+            const img = new Image();
+            img.onload = () => {
+                processMaskImage(img, (processedCanvas) => {
+                    maskImageSource = processedCanvas;
+                    originalMaskURL = 'human_shape.png';
+                    maskPreview.src = 'human_shape.png';
+                    maskPreviewContainer.style.display = 'block';
+                    currentMask = processedCanvas;
+                    renderCloud(cachedMessages, true);
+                });
+            };
+            img.src = 'human_shape.png';
+        };
+
+        clearMaskBtn.onclick = () => {
+            maskImageSource = null;
+            originalMaskURL = null;
+            maskInput.value = '';
+            maskPreviewContainer.style.display = 'none';
+        };
+
+        document.getElementById('refresh-btn').onclick = fetchData;
+        document.getElementById('apply-btn').onclick = () => {
+            fontScale = parseFloat(document.getElementById('fontScale').value) / 10;
+            minLen = parseInt(document.getElementById('minLen').value);
+            horizontalPos = parseInt(document.getElementById('horizontalPos').value);
+            verticalPos = parseInt(document.getElementById('verticalPos').value);
+            selectedFont = document.getElementById('fontFamily').value;
+            selectedColorMode = document.getElementById('colorMode').value;
+            selectedCustomColor = document.getElementById('wordColorPicker').value;
+            currentMask = maskImageSource;
+
+            const container = document.getElementById('canvas-container');
+            container.style.transform = `translate(calc(-50% + ${horizontalPos}px), calc(-50% + ${verticalPos}px))`;
+
+            resizeCanvas();
+            settingsPanel.style.display = 'none';
+        };
+
+        document.getElementById('reset-btn').onclick = () => {
+            fontScale = 2.0; minLen = 1; horizontalPos = 0; verticalPos = 0;
+            selectedFont = "'Inter', sans-serif";
+            document.getElementById('fontScale').value = 20; document.getElementById('minLen').value = 1;
+            document.getElementById('horizontalPos').value = 0; document.getElementById('verticalPos').value = 0;
+            document.getElementById('in-fontScale').value = "2.0"; document.getElementById('in-minLen').value = "1";
+            document.getElementById('in-horizontalPos').value = "0"; document.getElementById('in-verticalPos').value = "0";
+            document.getElementById('fontFamily').value = selectedFont;
+
+            selectedColorMode = 'random-dark';
+            selectedCustomColor = '#1a73e8';
+            document.getElementById('colorMode').value = selectedColorMode;
+            document.getElementById('wordColorPicker').value = selectedCustomColor;
+            document.getElementById('wordColorPicker').style.display = 'none';
+
+            document.getElementById('shrinkToFit').checked = true;
+
+            maskImageSource = null;
+            originalMaskURL = null;
+            currentMask = null;
+            backgroundImageSource = 'background.jpg';
+            document.body.style.backgroundImage = `url('background.jpg')`;
+
+            if (maskInput) maskInput.value = '';
+            if (bgInput) bgInput.value = '';
+            if (maskPreviewContainer) maskPreviewContainer.style.display = 'none';
+
+            const container = document.getElementById('canvas-container');
+            container.style.transform = `translate(-50%, -50%)`;
+
+            resizeCanvas();
+        };
+
+        function doLoadPreset(presetStr) {
+            try {
+                const preset = JSON.parse(presetStr);
+                if (!preset) return;
+
+                document.getElementById('fontScale').value = preset.fontScale || 20;
+                document.getElementById('in-fontScale').value = preset.inFontScale || 2.0;
+                document.getElementById('minLen').value = preset.minLen || 1;
+                document.getElementById('in-minLen').value = preset.inMinLen || 1;
+                document.getElementById('horizontalPos').value = preset.horizontalPos || 0;
+                document.getElementById('in-horizontalPos').value = preset.inHorizontalPos || 0;
+                document.getElementById('verticalPos').value = preset.verticalPos || 0;
+                document.getElementById('in-verticalPos').value = preset.inVerticalPos || 0;
+                document.getElementById('fontFamily').value = preset.selectedFont || "'Inter', sans-serif";
+
+                if (preset.selectedColorMode) {
+                    selectedColorMode = preset.selectedColorMode;
+                    selectedCustomColor = preset.selectedCustomColor || '#1a73e8';
+                    document.getElementById('colorMode').value = selectedColorMode;
+                    document.getElementById('wordColorPicker').value = selectedCustomColor;
+                    if (selectedColorMode === 'custom') {
+                        document.getElementById('wordColorPicker').style.display = 'block';
+                    } else {
+                        document.getElementById('wordColorPicker').style.display = 'none';
+                    }
+                }
+
+                document.getElementById('shrinkToFit').checked = preset.shrinkToFit !== false;
+
+                if (preset.backgroundImageSrc) {
+                    backgroundImageSource = preset.backgroundImageSrc;
+                    document.body.style.backgroundImage = `url('${backgroundImageSource}')`;
+                }
+
+                if (preset.originalMaskURL) {
+                    const img = new Image();
+                    img.onload = () => {
+                        processMaskImage(img, (processedCanvas) => {
+                            maskImageSource = processedCanvas;
+                            originalMaskURL = preset.originalMaskURL;
+                            maskPreview.src = originalMaskURL;
+                            maskPreviewContainer.style.display = 'block';
+                            currentMask = processedCanvas;
+                            document.getElementById('apply-btn').click();
+                        });
+                    };
+                    img.src = preset.originalMaskURL;
+                } else {
+                    document.getElementById('apply-btn').click();
+                }
+            } catch (e) { console.error('Error loading preset:', e); }
+        }
+
+        document.getElementById('save-preset-btn').onclick = () => {
+            const preset = {
+                fontScale: document.getElementById('fontScale').value,
+                inFontScale: document.getElementById('in-fontScale').value,
+                minLen: document.getElementById('minLen').value,
+                inMinLen: document.getElementById('in-minLen').value,
+                horizontalPos: document.getElementById('horizontalPos').value,
+                inHorizontalPos: document.getElementById('in-horizontalPos').value,
+                verticalPos: document.getElementById('verticalPos').value,
+                inVerticalPos: document.getElementById('in-verticalPos').value,
+                selectedFont: document.getElementById('fontFamily').value,
+                selectedColorMode: document.getElementById('colorMode').value,
+                selectedCustomColor: document.getElementById('wordColorPicker').value,
+                shrinkToFit: document.getElementById('shrinkToFit').checked,
+                originalMaskURL: originalMaskURL,
+                backgroundImageSrc: backgroundImageSource !== 'background.jpg' ? backgroundImageSource : null
+            };
+            try {
+                localStorage.setItem('wordCloudPreset', JSON.stringify(preset));
+                alert("Preset Saved!");
+            } catch (e) {
+                alert("Failed to save preset. Image attachments may be too large.");
+            }
+            settingsPanel.style.display = 'none';
+        };
+
+        document.getElementById('load-preset-btn').onclick = () => {
+            const presetStr = localStorage.getItem('wordCloudPreset');
+            if (presetStr) {
+                doLoadPreset(presetStr);
+                alert("Preset Loaded!");
+            } else {
+                alert("No saved preset found.");
+            }
+        };
+
+        // Auto load on init
+        setTimeout(() => {
+            const presetStr = localStorage.getItem('wordCloudPreset');
+            if (presetStr) doLoadPreset(presetStr);
+        }, 300);
+
+        // Keyboard Shortcut: Press 'F' to toggle settings icon visibility
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'f' || e.key === 'F') {
+                const toggleBtn = document.getElementById('settings-toggle');
+                if (toggleBtn.style.display === 'none') {
+                    toggleBtn.style.display = 'block';
+                } else {
+                    toggleBtn.style.display = 'none';
+                    settingsPanel.style.display = 'none'; // Also hide panel if button is hidden
+                }
+            }
+        });
+
+        document.getElementById('show-all-btn').onclick = () => { sessionStartTime = null; renderCloud(cachedMessages, true); settingsPanel.style.display = 'none'; };
+        document.getElementById('clear-btn').onclick = () => { sessionStartTime = new Date().toISOString(); renderCloud(cachedMessages, true); settingsPanel.style.display = 'none'; };
+
+        function resizeCanvas() {
+            canvas.width = (window.innerWidth * 0.85);
+            canvas.height = (window.innerHeight * 0.8);
+            renderCloud(cachedMessages, true);
+        }
+        window.onresize = resizeCanvas;
+        resizeCanvas();
+
+        async function fetchData() {
+            try {
+                const res = await fetch('/api/messages');
+                const data = await res.json();
+
+                // Only re-render if we actually have new data
+                if (data.messages.length !== cachedMessages.length) {
+                    cachedMessages = data.messages;
+                    renderCloud(cachedMessages);
+                }
+            } catch (e) { statusBar.textContent = "Error: " + e.message; }
+        }
+
+        function renderCloud(messages, force = false) {
+            if (isRendering && !force) return;
+
+            let filtered = messages;
+            if (sessionStartTime) filtered = messages.filter(m => m.timestamp >= sessionStartTime);
+
+            statusBar.textContent = `Messages: ${filtered.length} | Scale: ${fontScale} | Font: ${selectedFont.split(',')[0].replace(/'/g, '')}`;
+
+            if (filtered.length > 0) {
+                const lastMsg = filtered[filtered.length - 1];
+                if (lastMsg && lastMsg.text) {
+                    rawTextDiv.textContent = '"' + lastMsg.text.substring(0, 30) + '..."';
+                }
+            } else {
+                rawTextDiv.textContent = "(No messages yet)";
+            }
+
+            const counts = {};
+            let unfilteredWordsCount = 0;
+            filtered.forEach(m => {
+                if (m && m.text) {
+                    const words = m.text.split(/[\s,.;:!?()"-]+/);
+                    words.forEach(w => {
+                        w = w.toLowerCase().trim();
+                        if (w.length > 0) unfilteredWordsCount++;
+                        if (w.length >= minLen) counts[w] = (counts[w] || 0) + 1;
+                    });
+                }
+            });
+
+            totalWordsDiv.textContent = unfilteredWordsCount;
+            const list = Object.entries(counts).map(([w, c]) => [w, c]);
+            list.sort((a, b) => b[1] - a[1]);
+            debugList.innerHTML = list.length > 0 ? list.slice(0, 3).map(i => `<div>${i[0]}: ${i[1]}</div>`).join('') : "None found";
+
+            const finalList = list.slice(0, 300).map(i => [i[0], i[1]]);
+
+            if (finalList.length === 0) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.textAlign = "center"; ctx.fillStyle = "#aaa"; ctx.font = `18px ${selectedFont}`;
+                ctx.fillText("No words found matching criteria", canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            isRendering = true;
+            loadingOverlay.style.display = 'flex';
+            canvas.width = canvas.width;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (currentMask) {
+                // Create a temporary canvas matching our target size
+                const maskCanvasScaled = document.createElement("canvas");
+                maskCanvasScaled.width = canvas.width;
+                maskCanvasScaled.height = canvas.height;
+                const mctx = maskCanvasScaled.getContext("2d");
+
+                // Draw the mask scaled down slightly to fit the canvas
+                const scale = Math.min(maskCanvasScaled.width / currentMask.width, maskCanvasScaled.height / currentMask.height) * 0.95;
+                const w = currentMask.width * scale;
+                const h = currentMask.height * scale;
+                const x = (maskCanvasScaled.width - w) / 2;
+                const y = (maskCanvasScaled.height - h) / 2;
+                mctx.drawImage(currentMask, x, y, w, h);
+
+                // Read the drawn pixels
+                const imageData = mctx.getImageData(0, 0, maskCanvasScaled.width, maskCanvasScaled.height);
+                const newImageData = mctx.createImageData(imageData);
+
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    // processMaskImage outputs black silhouette (RGB=0) on transparent background (alpha=0)
+                    // We check if it's the silhouette (alpha > 128)
+                    if (imageData.data[i + 3] > 128) {
+                        // Area TO DRAW: Make it fully transparent (Algorithm sees empty space)
+                        newImageData.data[i] = 0;
+                        newImageData.data[i + 1] = 0;
+                        newImageData.data[i + 2] = 0;
+                        newImageData.data[i + 3] = 0;
+                    } else {
+                        // Area NOT TO DRAW: Give it an almost invisible alpha
+                        // Algorithm sees > 0 alpha and thinks it's occupied space!
+                        newImageData.data[i] = 255;
+                        newImageData.data[i + 1] = 255;
+                        newImageData.data[i + 2] = 255;
+                        newImageData.data[i + 3] = 2; // Invisible to humans, blocks words
+                    }
+                }
+
+                // Put the tricked pixels onto our MAIN canvas!
+                mctx.putImageData(newImageData, 0, 0);
+                ctx.drawImage(maskCanvasScaled, 0, 0);
+
+                // Since the mask is already drawn directly on the canvas, tell WordCloud not to clear it
+                executeWordCloud(finalList, false);
+            } else {
+                executeWordCloud(finalList, true);
+            }
+        }
+
+        function executeWordCloud(finalList, shouldClearCanvas) {
+            const hasMask = !shouldClearCanvas;
+            const baseFactor = hasMask ? 6 : 12;
+            const maskWeightFactor = (size) => {
+                let s = Math.log2(size + 1) * baseFactor * fontScale + 4;
+                if (hasMask) s *= 0.6;
+                return Math.min(s, 150);
+            };
+
+            let finalColor = selectedColorMode === 'custom' ? selectedCustomColor : selectedColorMode;
+
+            WordCloud(canvas, {
+                list: finalList,
+                gridSize: hasMask ? 4 : 10,
+                weightFactor: maskWeightFactor,
+                fontFamily: selectedFont,
+                color: finalColor,
+                rotateRatio: 0,
+                backgroundColor: 'transparent',
+                clearCanvas: shouldClearCanvas, // CRUCIAL: False if mask is used
+                drawOutOfBound: false,
+                shrinkToFit: document.getElementById('shrinkToFit').checked,
+                minSize: 2
+            });
+
+            canvas.addEventListener('wordclouddrawn', () => { isRendering = false; loadingOverlay.style.display = 'none'; }, { once: true });
+            canvas.addEventListener('wordcloudstop', () => { isRendering = false; loadingOverlay.style.display = 'none'; }, { once: true });
+        }
+
+        setInterval(fetchData, 3000); // Re-enabled with smart-check
+        fetchData();
+    </script>
+</body>
+
+</html>
