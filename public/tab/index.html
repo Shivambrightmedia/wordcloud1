@@ -33,7 +33,7 @@
 
         .heading-image {
             position: absolute;
-            top: 20px;
+            top: 65px;
             left: 50%;
             transform: translateX(-50%);
             max-width: 80%;
@@ -81,6 +81,11 @@
             color: rgba(255, 255, 255, 0.6);
         }
 
+        option {
+            background-color: #2b3a4a;
+            color: #ffffff;
+        }
+
         textarea {
             height: 120px;
             resize: none;
@@ -124,12 +129,17 @@
                 <input type="text" id="name" name="name" placeholder="Enter your name" required>
             </div>
             <div class="form-group">
-                <label for="department">Department</label>
-                <input type="text" id="department" name="department" placeholder="Enter your department" required>
+                <label for="department">Cluster</label>
+                <input type="text" id="department" name="department" placeholder="Enter your Cluster" required>
             </div>
             <div class="form-group">
-                <label for="message">Message (One word or phrase)</label>
-                <textarea id="message" name="message" placeholder="What's on your mind?" required></textarea>
+                <select id="questionSelect"
+                    style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; color: #e0e0e0; font-weight: bold; font-family: inherit; font-size: 1rem; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); letter-spacing: 0.5px; margin-bottom: 0.5rem; width: 100%; cursor: pointer; outline: none; white-space: normal;">
+                    <option>What does winning in 2026 look like for CD?</option>
+                    <option>What are you looking forward to in CD conference?</option>
+                    <option>One word which comes to your mind when you think ‘HUL CD’?</option>
+                </select>
+                <textarea id="message" name="message" placeholder="Type your answer here..." required></textarea>
             </div>
             <button type="submit" id="submitBtn">Send Message</button>
             <div class="success-msg" id="successMsg">Message sent successfully!</div>
