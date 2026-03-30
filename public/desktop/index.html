@@ -193,6 +193,84 @@
             font-weight: bold;
             color: #1a73e8;
         }
+
+        #data-manager-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .data-modal-content {
+            background: white;
+            width: 85%;
+            max-width: 1000px;
+            height: 85%;
+            max-height: 700px;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .data-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .data-table-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            word-break: break-word;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+            font-weight: bold;
+            color: #444;
+        }
+
+        .delete-row-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .delete-row-btn:hover {
+            background: #c82333;
+        }
     </style>
 </head>
 
@@ -312,6 +390,9 @@
         <button id="apply-btn">Apply Settings</button>
         <button id="reset-btn">Reset Defaults</button>
         <div style="border-top: 1px solid #f1f3f4; margin-top: 15px; padding-top: 10px;">
+            <button id="download-csv-btn" style="background: #6f42c1; color: white;">📊 Download Data as CSV</button>
+            <button id="manage-data-btn" style="background: #007bff; color: white; margin-bottom: 8px;">🗂️ View &
+                Delete Specific Data</button>
             <button id="show-all-btn">Show All History</button>
             <button id="clear-btn">Clear Session</button>
         </div>
@@ -322,7 +403,52 @@
         <div id="loading-overlay">Generating Cloud...</div>
     </div>
 
-    <script>
+    <!-- Data Manager Modal -->
+    <div id="data-manager-modal">
+        <div class="data-modal-content">
+            <div class="data-modal-header">
+                <h2 style="margin: 0; color: #1a73e8;">Data Management (Room: <span id="dm-room-name"></span>)</h2>
+                <button id="close-dm-btn"
+                    style="width: auto; background: #666; margin: 0; color: white; padding: 8px 20px; border-radius: 6px;">Close</button>
+            </div>
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Cluster</th>
+                            <th>Message</th>
+                            <th>Time</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAM9YaUbHPp4X2OtsDknnq1Avf5xjEEVdc",
+            authDomain: "wordcloudlive-e5387.firebaseapp.com",
+            databaseURL: "https://wordcloudlive-e5387-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "wordcloudlive-e5387",
+            storageBucket: "wordcloudlive-e5387.firebasestorage.app",
+            messagingSenderId: "886258321259",
+            appId: "1:886258321259:web:32d34e3a9b58087e372e2e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Get Room ID from URL (e.g. ?room=1), default to 'main'
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room') || 'main';
         const canvas = document.getElementById('word-cloud-canvas');
         const statusBar = document.getElementById('status-bar');
         const rawTextDiv = document.getElementById('raw-text');
@@ -470,7 +596,7 @@
             maskPreviewContainer.style.display = 'none';
         };
 
-        document.getElementById('refresh-btn').onclick = fetchData;
+        document.getElementById('refresh-btn').onclick = () => { renderCloud(cachedMessages, true) };
         document.getElementById('apply-btn').onclick = () => {
             fontScale = parseFloat(document.getElementById('fontScale').value) / 10;
             minLen = parseInt(document.getElementById('minLen').value);
@@ -632,6 +758,71 @@
         document.getElementById('show-all-btn').onclick = () => { sessionStartTime = null; renderCloud(cachedMessages, true); settingsPanel.style.display = 'none'; };
         document.getElementById('clear-btn').onclick = () => { sessionStartTime = new Date().toISOString(); renderCloud(cachedMessages, true); settingsPanel.style.display = 'none'; };
 
+        document.getElementById('download-csv-btn').onclick = () => {
+            if (!cachedMessages || cachedMessages.length === 0) {
+                alert("No data available to download in this room yet!");
+                return;
+            }
+            const headers = "Name,Cluster,Message,Timestamp\n";
+            const rows = cachedMessages.map(m => {
+                const cleanName = (m.name || '').replace(/,/g, ' ');
+                const cleanDept = (m.department || '').replace(/,/g, ' ');
+                const cleanMsg = (m.text || '').replace(/,/g, ' ').replace(/\n/g, ' ');
+                return `${cleanName},${cleanDept},${cleanMsg},${m.timestamp || ''}`;
+            });
+            const csvContent = headers + rows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `wordcloud_data_${roomId}.csv`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            settingsPanel.style.display = 'none';
+        };
+
+        // Date Manager Logic
+        const dataManagerModal = document.getElementById('data-manager-modal');
+        document.getElementById('manage-data-btn').onclick = () => {
+            document.getElementById('dm-room-name').textContent = roomId;
+            renderDataManager();
+            dataManagerModal.style.display = 'flex';
+            settingsPanel.style.display = 'none';
+        };
+        document.getElementById('close-dm-btn').onclick = () => {
+            dataManagerModal.style.display = 'none';
+            renderCloud(cachedMessages); // re-render just in case
+        };
+
+        window.deleteFirebaseMessage = async (id) => {
+            if (confirm("Are you sure you want to completely delete this message from the cloud?")) {
+                try {
+                    await remove(ref(database, 'messages/' + roomId + '/' + id));
+                    // The UI will auto update because of the onValue listener!
+                } catch (e) {
+                    alert("Failed to delete: " + e.message);
+                }
+            }
+        };
+
+        function renderDataManager() {
+            const tbody = document.getElementById('data-table-body');
+            tbody.innerHTML = '';
+            cachedMessages.forEach(m => {
+                const tr = document.createElement('tr');
+                const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleString() : 'N/A';
+                tr.innerHTML = `
+                    <td>${m.name || ''}</td>
+                    <td>${m.department || ''}</td>
+                    <td>${m.text || ''}</td>
+                    <td><small>${timeStr}</small></td>
+                    <td><button class="delete-row-btn" onclick="deleteFirebaseMessage('${m.id}')">Delete</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         function resizeCanvas() {
             canvas.width = (window.innerWidth * 0.85);
             canvas.height = (window.innerHeight * 0.8);
@@ -640,18 +831,38 @@
         window.onresize = resizeCanvas;
         resizeCanvas();
 
-        async function fetchData() {
-            try {
-                const res = await fetch('/api/messages');
-                const data = await res.json();
+        // Firebase Realtime Update Listener
+        const messagesRef = ref(database, 'messages/' + roomId);
+        onValue(messagesRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // Convert Firebase object map to array WITH KEYS mapped to 'id'
+                const messagesArray = Object.entries(data).map(([key, val]) => {
+                    return { id: key, ...val };
+                });
 
-                // Only re-render if we actually have new data
-                if (data.messages.length !== cachedMessages.length) {
-                    cachedMessages = data.messages;
-                    renderCloud(cachedMessages);
+                // Sort by timestamp if available
+                messagesArray.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                // Always update cached messages and re-render cloud.
+                // It's fast and ensures drops are removed properly.
+                cachedMessages = messagesArray;
+                renderCloud(cachedMessages, true);
+
+                // If Data Manager is open, auto update the table
+                if (dataManagerModal.style.display === 'flex') {
+                    renderDataManager();
                 }
-            } catch (e) { statusBar.textContent = "Error: " + e.message; }
-        }
+            } else {
+                cachedMessages = [];
+                renderCloud(cachedMessages, true);
+                if (dataManagerModal.style.display === 'flex') {
+                    renderDataManager();
+                }
+            }
+        }, (error) => {
+            statusBar.textContent = "Firebase Error: " + error.message;
+        });
 
         function renderCloud(messages, force = false) {
             if (isRendering && !force) return;
@@ -782,8 +993,6 @@
             canvas.addEventListener('wordcloudstop', () => { isRendering = false; loadingOverlay.style.display = 'none'; }, { once: true });
         }
 
-        setInterval(fetchData, 3000); // Re-enabled with smart-check
-        fetchData();
     </script>
 </body>
 
