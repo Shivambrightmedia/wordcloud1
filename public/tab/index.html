@@ -16,6 +16,7 @@
             height: 100vh;
             margin: 0;
             position: relative;
+            min-height: -webkit-fill-available;
         }
 
         .container {
@@ -127,11 +128,11 @@
         <form id="submitForm">
             <div class="form-group">
                 <label for="name">Name</label>
-                <input type="text" id="name" name="name" placeholder="Enter your name" required>
+                <input type="text" id="name" name="name" placeholder="Enter your name" required autocomplete="one-time-code" spellcheck="false">
             </div>
             <div class="form-group">
                 <label for="department">Cluster</label>
-                <input type="text" id="department" name="department" placeholder="Enter your Cluster" required>
+                <input type="text" id="department" name="department" placeholder="Enter your Cluster" required autocomplete="one-time-code" spellcheck="false">
             </div>
             <div class="form-group">
                 <select id="questionSelect"
