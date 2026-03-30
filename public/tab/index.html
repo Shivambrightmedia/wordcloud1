@@ -71,14 +71,37 @@
         }
 
         input:focus,
-        textarea:focus {
+        textarea:focus,
+        [contenteditable]:focus {
             background: rgba(255, 255, 255, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.6);
             box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
         }
 
         input::placeholder,
-        textarea::placeholder {
+        textarea::placeholder,
+        .placeholder-text {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        [contenteditable] {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+            min-height: 46px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        [contenteditable]:empty:before {
+            content: attr(data-placeholder);
             color: rgba(255, 255, 255, 0.6);
         }
 
@@ -127,15 +150,16 @@
     <div class="container">
         <form id="submitForm">
             <div class="form-group">
-                <label for="user_display_name">Name</label>
-                <input type="text" id="user_display_name" name="user_display_name" placeholder="Enter your name"
-                    required autocomplete="new-password" spellcheck="false" readonly
-                    onfocus="this.removeAttribute('readonly');">
+                <label>Name</label>
+                <div id="user_display_name" contenteditable="true" data-placeholder="Enter your name"
+                     spellcheck="false" autocomplete="off" 
+                     onkeydown="if(event.keyCode===13)event.preventDefault();"></div>
             </div>
             <div class="form-group">
-                <label for="user_group_unit">Cluster</label>
-                <input type="text" id="user_group_unit" name="user_group_unit" placeholder="Enter your Cluster" required
-                    autocomplete="new-password" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');">
+                <label>Cluster</label>
+                <div id="user_group_unit" contenteditable="true" data-placeholder="Enter your Cluster"
+                     spellcheck="false" autocomplete="off"
+                     onkeydown="if(event.keyCode===13)event.preventDefault();"></div>
             </div>
             <div class="form-group">
                 <select id="questionSelect"
@@ -175,10 +199,19 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const nameVal = document.getElementById('user_display_name').innerText.trim();
+            const clusterVal = document.getElementById('user_group_unit').innerText.trim();
+            const messageVal = document.getElementById('message').value.trim();
+
+            if (!nameVal || !clusterVal || !messageVal) {
+                alert("Please fill in all fields!");
+                return;
+            }
+
             const formData = {
-                name: document.getElementById('user_display_name').value,
-                department: document.getElementById('user_group_unit').value,
-                text: document.getElementById('message').value,
+                name: nameVal,
+                department: clusterVal,
+                text: messageVal,
                 timestamp: new Date().toISOString()
             };
 
@@ -196,6 +229,8 @@
 
                 successMsg.style.display = 'block';
                 form.reset();
+                document.getElementById('user_display_name').innerText = '';
+                document.getElementById('user_group_unit').innerText = '';
                 setTimeout(() => {
                     successMsg.style.display = 'none';
                     submitBtn.disabled = false;
