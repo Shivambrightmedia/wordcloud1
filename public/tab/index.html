@@ -150,18 +150,6 @@
     <div class="container">
         <form id="submitForm">
             <div class="form-group">
-                <label>Name</label>
-                <div id="user_display_name" contenteditable="true" data-placeholder="Enter your name"
-                     spellcheck="false" autocomplete="off" 
-                     onkeydown="if(event.keyCode===13)event.preventDefault();"></div>
-            </div>
-            <div class="form-group">
-                <label>Cluster</label>
-                <div id="user_group_unit" contenteditable="true" data-placeholder="Enter your Cluster"
-                     spellcheck="false" autocomplete="off"
-                     onkeydown="if(event.keyCode===13)event.preventDefault();"></div>
-            </div>
-            <div class="form-group">
                 <select id="questionSelect"
                     style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; color: #e0e0e0; font-weight: bold; font-family: inherit; font-size: 1rem; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); letter-spacing: 0.5px; margin-bottom: 0.5rem; width: 100%; cursor: pointer; outline: none; white-space: normal;">
                     <option>What does winning in 2026 look like for CD?</option>
@@ -199,18 +187,16 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const nameVal = document.getElementById('user_display_name').innerText.trim();
-            const clusterVal = document.getElementById('user_group_unit').innerText.trim();
             const messageVal = document.getElementById('message').value.trim();
 
-            if (!nameVal || !clusterVal || !messageVal) {
-                alert("Please fill in all fields!");
+            if (!messageVal) {
+                alert("Please type your answer!");
                 return;
             }
 
             const formData = {
-                name: nameVal,
-                department: clusterVal,
+                name: "Guest",
+                department: "Anonymous",
                 text: messageVal,
                 timestamp: new Date().toISOString()
             };
@@ -229,8 +215,6 @@
 
                 successMsg.style.display = 'block';
                 form.reset();
-                document.getElementById('user_display_name').innerText = '';
-                document.getElementById('user_group_unit').innerText = '';
                 setTimeout(() => {
                     successMsg.style.display = 'none';
                     submitBtn.disabled = false;
