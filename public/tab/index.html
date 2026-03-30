@@ -121,7 +121,8 @@
 </head>
 
 <body>
-    <img src="Heading.png" class="heading-image" alt="Heading">
+    <img src="Heading.png" class="heading-image" id="headingImg" alt="Heading" style="cursor: pointer;"
+        title="Tap to toggle fullscreen">
     <div class="container">
         <form id="submitForm">
             <div class="form-group">
@@ -201,6 +202,20 @@
                 alert('Connection error. Check your internet connection.');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Send Message';
+            }
+        });
+
+        // Fullscreen Toggle on Heading Click
+        const headingImg = document.getElementById('headingImg');
+        headingImg.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
             }
         });
     </script>
