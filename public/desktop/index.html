@@ -415,8 +415,6 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Cluster</th>
                             <th>Message</th>
                             <th>Time</th>
                             <th>Action</th>
@@ -763,12 +761,10 @@
                 alert("No data available to download in this room yet!");
                 return;
             }
-            const headers = "Name,Cluster,Message,Timestamp\n";
+            const headers = "Message,Timestamp\n";
             const rows = cachedMessages.map(m => {
-                const cleanName = (m.name || '').replace(/,/g, ' ');
-                const cleanDept = (m.department || '').replace(/,/g, ' ');
                 const cleanMsg = (m.text || '').replace(/,/g, ' ').replace(/\n/g, ' ');
-                return `${cleanName},${cleanDept},${cleanMsg},${m.timestamp || ''}`;
+                return `${cleanMsg},${m.timestamp || ''}`;
             });
             const csvContent = headers + rows.join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -813,8 +809,6 @@
                 const tr = document.createElement('tr');
                 const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleString() : 'N/A';
                 tr.innerHTML = `
-                    <td>${m.name || ''}</td>
-                    <td>${m.department || ''}</td>
                     <td>${m.text || ''}</td>
                     <td><small>${timeStr}</small></td>
                     <td><button class="delete-row-btn" onclick="deleteFirebaseMessage('${m.id}')">Delete</button></td>
