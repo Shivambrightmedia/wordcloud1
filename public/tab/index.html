@@ -127,12 +127,15 @@
     <div class="container">
         <form id="submitForm">
             <div class="form-group">
-                <label for="name">Name</label>
-                <input type="text" id="name" name="name" placeholder="Enter your name" required autocomplete="one-time-code" spellcheck="false">
+                <label for="user_display_name">Name</label>
+                <input type="text" id="user_display_name" name="user_display_name" placeholder="Enter your name"
+                    required autocomplete="new-password" spellcheck="false" readonly
+                    onfocus="this.removeAttribute('readonly');">
             </div>
             <div class="form-group">
-                <label for="department">Cluster</label>
-                <input type="text" id="department" name="department" placeholder="Enter your Cluster" required autocomplete="one-time-code" spellcheck="false">
+                <label for="user_group_unit">Cluster</label>
+                <input type="text" id="user_group_unit" name="user_group_unit" placeholder="Enter your Cluster" required
+                    autocomplete="new-password" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');">
             </div>
             <div class="form-group">
                 <select id="questionSelect"
@@ -173,8 +176,8 @@
             e.preventDefault();
 
             const formData = {
-                name: document.getElementById('name').value,
-                department: document.getElementById('department').value,
+                name: document.getElementById('user_display_name').value,
+                department: document.getElementById('user_group_unit').value,
                 text: document.getElementById('message').value,
                 timestamp: new Date().toISOString()
             };
